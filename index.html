@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claude Skill Uploader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0f0f0d;--ink2:#4a4a42;--ink3:#8a8a7e;
+  --paper:#faf9f6;--white:#ffffff;
+  --rule:#e2e0d8;--rule2:#ccc9be;
+  --blue:#1d4ed8;--blue-bg:#eff6ff;--blue-rule:#bfdbfe;
+  --green:#15803d;--green-bg:#f0fdf4;--green-rule:#86efac;
+  --red:#b91c1c;--red-bg:#fef2f2;--red-rule:#fca5a5;
+  --amber:#92400e;--amber-bg:#fffbeb;
+  --r:6px;--rlg:10px;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.65;min-height:100vh}
+
+.site-header{background:var(--white);border-bottom:1px solid var(--rule);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:30px;height:30px;background:var(--ink);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-mark svg{color:#fff}
+.brand-name{font-size:15px;font-weight:500;letter-spacing:-0.02em}
+.brand-name em{font-style:italic;font-weight:300;color:var(--ink3)}
+.header-note{font-size:12px;color:var(--ink3)}
+
+.hero{border-bottom:1px solid var(--rule);padding:3.5rem 2rem 3rem;background:var(--white);text-align:center}
+.hero h1{font-size:clamp(26px,5vw,44px);font-weight:300;letter-spacing:-0.03em;line-height:1.15;margin-bottom:.75rem}
+.hero h1 strong{font-weight:500}
+.hero p{font-size:15px;color:var(--ink2);max-width:460px;margin:0 auto 1.5rem}
+.hero-pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.pill{font-size:11px;font-weight:500;letter-spacing:0.04em;padding:4px 12px;border-radius:20px;background:var(--paper);border:1px solid var(--rule2);color:var(--ink2)}
+
+.page{max-width:680px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.section{margin-bottom:2rem}
+.eyebrow{font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.eyebrow::after{content:'';flex:1;height:1px;background:var(--rule)}
+.card{background:var(--white);border:1px solid var(--rule);border-radius:var(--rlg);padding:1.25rem}
+
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-num.done{background:var(--green)}
+.step-num.active{background:var(--blue)}
+.step-body{flex:1}
+.step-title{font-size:14px;font-weight:500;margin-bottom:6px}
+.step-desc{font-size:12px;color:var(--ink2);margin-bottom:10px;line-height:1.55}
+
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+.field label{font-size:11px;font-weight:500;color:var(--ink2);letter-spacing:0.03em;text-transform:uppercase}
+.field input,.field select{border:1px solid var(--rule);border-radius:var(--r);padding:9px 11px;font-size:13px;font-family:inherit;background:var(--paper);color:var(--ink);transition:border-color .15s,background .15s;width:100%}
+.field input:focus,.field select:focus{outline:none;border-color:var(--blue);background:var(--white)}
+.field input.mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+.field select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8a7e' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+.field select:disabled{opacity:.5;cursor:not-allowed}
+.hint{font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5}
+.hint a{color:var(--blue);text-decoration:none}
+.hint a:hover{text-decoration:underline}
+.inline-row{display:flex;gap:8px;align-items:stretch}
+.inline-row input{flex:1}
+
+button{cursor:pointer;font-family:inherit}
+.btn{border-radius:var(--r);padding:9px 16px;font-size:13px;font-weight:500;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.btn-dark{background:var(--ink);color:var(--white);border-color:var(--ink)}
+.btn-dark:hover{opacity:.85}
+.btn-dark:disabled{opacity:.3;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--ink2);border-color:var(--rule)}
+.btn-ghost:hover{border-color:var(--rule2);color:var(--ink)}
+.btn-sm{font-size:12px;padding:7px 12px}
+
+.connected-box{background:var(--green-bg);border:1px solid var(--green-rule);border-radius:var(--r);padding:10px 14px;display:none;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--green);margin-bottom:10px}
+.connected-box.show{display:flex}
+.connected-box strong{font-weight:500}
+
+.repo-picker-wrap{display:none}
+.repo-picker-wrap.show{display:block}
+
+.folder-preview{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--ink2);font-family:'JetBrains Mono',monospace;line-height:1.8;display:none;margin-top:8px}
+.folder-preview.show{display:block}
+
+.drop-zone{border:1.5px dashed var(--rule2);border-radius:var(--rlg);padding:3rem 2rem;text-align:center;cursor:pointer;background:var(--white);transition:all .15s}
+.drop-zone:hover,.drop-zone.over{border-color:var(--blue);background:var(--blue-bg)}
+.dz-icon{width:36px;height:36px;margin:0 auto 12px;color:var(--ink3)}
+.dz-title{font-size:15px;font-weight:500;margin-bottom:4px}
+.dz-sub{font-size:13px;color:var(--ink3)}
+
+.file-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.file-row{display:flex;align-items:center;gap:10px;background:var(--white);border:1px solid var(--rule);border-radius:var(--r);padding:10px 12px}
+.fi-icon{color:var(--ink3);flex-shrink:0}
+.fi-info{flex:1;min-width:0}
+.fi-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi-meta{font-size:11px;color:var(--ink3);margin-top:2px}
+.badge{font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;flex-shrink:0;white-space:nowrap}
+.badge-q{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-rule)}
+.badge-w{background:var(--amber-bg);color:var(--amber);border:1px solid #fde68a}
+.badge-ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-rule)}
+.badge-err{background:var(--red-bg);color:var(--red);border:1px solid var(--red-rule)}
+.rm-btn{background:none;border:none;color:var(--ink3);padding:4px;border-radius:4px;display:flex;align-items:center;flex-shrink:0;transition:color .15s}
+.rm-btn:hover{color:var(--red)}
+
+.action-row{display:flex;gap:10px;align-items:center;margin-top:14px}
+.prog-wrap{height:2px;background:var(--rule);border-radius:2px;margin-top:12px;overflow:hidden;display:none}
+.prog-bar{height:100%;background:var(--blue);border-radius:2px;width:0%;transition:width .35s ease}
+
+.results{margin-top:2rem;display:none}
+.result-item{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid var(--rule);font-size:13px}
+.result-item:last-child{border-bottom:none}
+.dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.dot-ok{background:#22c55e}
+.dot-err{background:#ef4444}
+.res-path{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);margin-top:2px}
+.res-err{font-size:12px;color:var(--red);margin-top:2px}
+.res-link{font-size:11px;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-top:2px}
+.res-link:hover{text-decoration:underline}
+
+.divider{border:none;border-top:1px solid var(--rule);margin:1.25rem 0}
+.locked{opacity:.4;pointer-events:none;user-select:none}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--white);padding:10px 18px;border-radius:var(--r);font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:999}
+.toast.show{opacity:1}
+
+footer{border-top:1px solid var(--rule);padding:1.5rem 2rem;text-align:center;font-size:12px;color:var(--ink3)}
+footer a{color:var(--ink2);text-decoration:none}
+footer a:hover{text-decoration:underline}
+
+@media(max-width:520px){
+  .hero{padding:2rem 1.25rem 1.75rem}
+  .hero h1{font-size:24px}
+  .page{padding:1.5rem 1rem 4rem}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77A5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/>
+      </svg>
+    </div>
+    <span class="brand-name">Skill Uploader <em>for Claude</em></span>
+  </div>
+  <span class="header-note">No installs · runs in your browser</span>
+</header>
+
+<div class="hero">
+  <h1>Upload skills<br><strong>straight to GitHub.</strong></h1>
+  <p>Connect your GitHub account, pick your repo, and drop your skill files. Done.</p>
+  <div class="hero-pills">
+    <span class="pill">No coding needed</span>
+    <span class="pill">Direct GitHub commit</span>
+    <span class="pill">.md files</span>
+  </div>
+</div>
+
+<main class="page">
+
+  <!-- STEP 1: GITHUB TOKEN -->
+  <div class="section">
+    <div class="eyebrow">Step 1</div>
+    <div class="card">
+      <div class="step">
+        <div class="step-num" id="s1num">1</div>
+        <div class="step-body">
+          <div class="step-title">Connect to GitHub</div>
+          <div class="step-desc">Paste your GitHub token and we'll fetch your repos so you can pick one from a list — no typing needed.</div>
+
+          <div id="gh-connected" class="connected-box">
+            <span>✓ Connected as <strong id="gh-username"></strong></span>
+            <button class="btn btn-ghost btn-sm" onclick="resetGitHub()">Change</button>
+          </div>
+
+          <div id="gh-form">
+            <div class="field">
+              <label>GitHub personal access token</label>
+              <div class="inline-row">
+                <input type="password" id="ghToken" class="mono" placeholder="ghp_… or github_pat_…" autocomplete="off" />
+                <button class="btn btn-dark btn-sm" id="ghConnectBtn" onclick="connectGitHub()">Connect</button>
+              </div>
+              <div class="hint">
+                Create one at <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a>
+                → Fine-grained token → set <strong>Contents: Read &amp; write</strong> on your destination repo
+              </div>
+            </div>
+          </div>
+
+          <div class="repo-picker-wrap" id="repoPicker">
+            <hr class="divider" />
+            <div class="field">
+              <label>Which repo should skills go into?</label>
+              <select id="repoSelect" onchange="onRepoChange()">
+                <option value="">— pick a repo —</option>
+              </select>
+            </div>
+            <div class="field" id="branchField" style="display:none">
+              <label>Branch</label>
+              <select id="branchSelect"></select>
+            </div>
+            <div class="folder-preview" id="folderPreview"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: UPLOAD -->
+  <div class="section" id="step2wrap">
+    <div class="eyebrow">Step 2</div>
+    <div class="card">
+      <div class="step">
+        <div class="step-num" id="s2num">2</div>
+        <div class="step-body">
+          <div class="step-title">Upload your skill files</div>
+          <div class="step-desc">Drop one or more <code style="font-family:monospace;font-size:12px">.md</code> files below. They'll be committed directly into your chosen repo, sorted into folders automatically by their content.</div>
+
+          <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <div class="dz-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+              </svg>
+            </div>
+            <p class="dz-title">Drop .md files here</p>
+            <p class="dz-sub">or click to browse — multiple files supported</p>
+            <input type="file" id="fileInput" accept=".md" multiple style="display:none" />
+          </div>
+
+          <div class="file-list" id="fileList"></div>
+
+          <div class="action-row">
+            <button class="btn btn-dark" id="commitBtn" disabled onclick="commitAll()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77A5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/>
+              </svg>
+              Commit to GitHub
+            </button>
+            <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+          </div>
+
+          <div class="prog-wrap" id="progWrap">
+            <div class="prog-bar" id="progBar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results">
+    <div class="eyebrow">Results</div>
+    <div class="card" id="resultItems"></div>
+  </div>
+
+</main>
+
+<footer>
+  Built for Claude skill management &nbsp;·&nbsp;
+  <a href="https://github.com/settings/tokens" target="_blank">Create a GitHub token</a>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let ghToken = '';
+let ghUser = '';
+let selectedRepo = '';
+let selectedBranch = 'main';
+const files = [];
+
+// Lock step 2 until GitHub connected
+lockStep('step2wrap');
+
+function lockStep(id){ document.getElementById(id).classList.add('locked'); }
+function unlockStep(id){ document.getElementById(id).classList.remove('locked'); }
+
+function toast(msg, dur=3000){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+// ── GitHub connect ──
+async function connectGitHub(){
+  const token = document.getElementById('ghToken').value.trim();
+  if(!token){ toast('Paste your GitHub token first.'); return; }
+  const btn = document.getElementById('ghConnectBtn');
+  btn.textContent='Connecting…'; btn.disabled=true;
+  try {
+    const uRes = await fetch('https://api.github.com/user',{
+      headers:{Authorization:`token ${token}`,Accept:'application/vnd.github+json'}
+    });
+    if(!uRes.ok) throw new Error('Invalid token — check it and try again');
+    const uData = await uRes.json();
+    ghToken = token;
+    ghUser = uData.login;
+
+    const rRes = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated',{
+      headers:{Authorization:`token ${token}`,Accept:'application/vnd.github+json'}
+    });
+    const repos = await rRes.json();
+
+    const sel = document.getElementById('repoSelect');
+    sel.innerHTML='<option value="">— pick a repo —</option>';
+    repos.forEach(r=>{
+      const opt=document.createElement('option');
+      opt.value=r.full_name;
+      opt.textContent=r.full_name+(r.private?' 🔒':'');
+      sel.appendChild(opt);
+    });
+
+    document.getElementById('gh-form').style.display='none';
+    document.getElementById('gh-connected').classList.add('show');
+    document.getElementById('gh-username').textContent=ghUser;
+    document.getElementById('s1num').classList.add('done');
+    document.getElementById('s1num').textContent='✓';
+    document.getElementById('repoPicker').classList.add('show');
+    toast('Connected as '+ghUser+' — now pick a repo below');
+  } catch(e){
+    toast('❌ '+e.message);
+    btn.textContent='Connect'; btn.disabled=false;
+  }
+}
+
+function resetGitHub(){
+  ghToken=''; ghUser=''; selectedRepo=''; selectedBranch='main';
+  document.getElementById('ghToken').value='';
+  document.getElementById('gh-form').style.display='block';
+  document.getElementById('gh-connected').classList.remove('show');
+  document.getElementById('ghConnectBtn').textContent='Connect';
+  document.getElementById('ghConnectBtn').disabled=false;
+  document.getElementById('s1num').classList.remove('done');
+  document.getElementById('s1num').textContent='1';
+  document.getElementById('repoPicker').classList.remove('show');
+  document.getElementById('branchField').style.display='none';
+  document.getElementById('folderPreview').classList.remove('show');
+  lockStep('step2wrap');
+}
+
+async function onRepoChange(){
+  const repo = document.getElementById('repoSelect').value;
+  if(!repo){ lockStep('step2wrap'); return; }
+  selectedRepo = repo;
+  const [owner,repoName] = repo.split('/');
+  try {
+    const bRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/branches?per_page=50`,{
+      headers:{Authorization:`token ${ghToken}`,Accept:'application/vnd.github+json'}
+    });
+    const branches = await bRes.json();
+    const bSel = document.getElementById('branchSelect');
+    bSel.innerHTML='';
+    branches.forEach(b=>{
+      const opt=document.createElement('option');
+      opt.value=b.name; opt.textContent=b.name;
+      if(b.name==='main'||b.name==='master') opt.selected=true;
+      bSel.appendChild(opt);
+    });
+    selectedBranch = bSel.value;
+    bSel.onchange=()=>{ selectedBranch=bSel.value; updatePreview(); };
+    document.getElementById('branchField').style.display='block';
+  } catch {}
+  updatePreview();
+  document.getElementById('s2num').classList.add('active');
+  unlockStep('step2wrap');
+  toast('Repo selected — drop your files in Step 2');
+}
+
+function updatePreview(){
+  const prev = document.getElementById('folderPreview');
+  if(!selectedRepo){ prev.classList.remove('show'); return; }
+  const repoName = selectedRepo.split('/')[1];
+  prev.classList.add('show');
+  prev.innerHTML=`📁 ${repoName}/  (${selectedBranch})<br>&nbsp;&nbsp;└─ 📁 skills/<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 📁 coding/<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 📁 writing/<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 📁 analysis/ …`;
+}
+
+// ── File upload ──
+const dz=document.getElementById('dropZone');
+const fi=document.getElementById('fileInput');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');addFiles([...e.dataTransfer.files])});
+fi.addEventListener('change',()=>{addFiles([...fi.files]);fi.value='';});
+
+function addFiles(newFiles){
+  newFiles.filter(f=>f.name.endsWith('.md')).forEach(f=>{
+    if(!files.find(x=>x.name===f.name)){files.push(f);renderRow(f);}
+  });
+  updateBtn();
+}
+
+function rowId(n){return 'row-'+n.replace(/\W/g,'_')}
+function badgeId(n){return 'badge-'+n.replace(/\W/g,'_')}
+
+function renderRow(f){
+  const el=document.createElement('div');
+  el.className='file-row'; el.id=rowId(f.name);
+  el.innerHTML=`
+    <svg class="fi-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+    </svg>
+    <div class="fi-info">
+      <div class="fi-name">${f.name}</div>
+      <div class="fi-meta">${(f.size/1024).toFixed(1)} KB · markdown</div>
+    </div>
+    <span class="badge badge-q" id="${badgeId(f.name)}">Queued</span>
+    <button class="rm-btn" aria-label="Remove" onclick="removeFile('${f.name}')">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>`;
+  document.getElementById('fileList').appendChild(el);
+}
+
+function removeFile(name){
+  const i=files.findIndex(f=>f.name===name);
+  if(i>-1)files.splice(i,1);
+  document.getElementById(rowId(name))?.remove();
+  updateBtn();
+}
+
+function clearAll(){
+  files.length=0;
+  document.getElementById('fileList').innerHTML='';
+  document.getElementById('results').style.display='none';
+  document.getElementById('resultItems').innerHTML='';
+  updateBtn();
+}
+
+function updateBtn(){
+  document.getElementById('commitBtn').disabled=files.length===0||!selectedRepo;
+}
+
+// ── Commit to GitHub (no AI — files go into skills/ root) ──
+async function commitFile(path, content){
+  const [owner,repoName]=selectedRepo.split('/');
+  const encoded=btoa(unescape(encodeURIComponent(content)));
+  let sha;
+  try{
+    const c=await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/${path}?ref=${selectedBranch}`,{
+      headers:{Authorization:`token ${ghToken}`,Accept:'application/vnd.github+json'}
+    });
+    if(c.ok){const d=await c.json();sha=d.sha;}
+  }catch{}
+  const r=await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/${path}`,{
+    method:'PUT',
+    headers:{Authorization:`token ${ghToken}`,Accept:'application/vnd.github+json','Content-Type':'application/json'},
+    body:JSON.stringify({
+      message:`Add skill: ${path.split('/').pop()}`,
+      content:encoded,
+      branch:selectedBranch,
+      ...(sha?{sha}:{})
+    })
+  });
+  if(!r.ok){const d=await r.json();throw new Error(d.message||'GitHub error');}
+  const d=await r.json();
+  return d.content?.html_url||`https://github.com/${selectedRepo}/blob/${selectedBranch}/${path}`;
+}
+
+async function commitAll(){
+  if(!ghToken||!selectedRepo){toast('Connect to GitHub and pick a repo first.');return;}
+  const btn=document.getElementById('commitBtn');
+  btn.disabled=true;
+  const pw=document.getElementById('progWrap');
+  const pb=document.getElementById('progBar');
+  pw.style.display='block'; pb.style.width='5%';
+  const resultEl=document.getElementById('results');
+  const itemsEl=document.getElementById('resultItems');
+  resultEl.style.display='block';
+  itemsEl.innerHTML='';
+  const total=files.length; let done=0;
+
+  for(const f of [...files]){
+    const badge=document.getElementById(badgeId(f.name));
+    if(badge){badge.className='badge badge-w';badge.textContent='Uploading…';}
+    try{
+      const content=await f.text();
+      const path=`skills/${f.name}`;
+      const url=await commitFile(path,content);
+      if(badge){badge.className='badge badge-ok';badge.textContent='Saved';}
+      itemsEl.innerHTML+=`
+        <div class="result-item">
+          <div class="dot dot-ok"></div>
+          <div>
+            <div>${f.name}</div>
+            <div class="res-path">${selectedRepo} → ${path}</div>
+            <a class="res-link" href="${url}" target="_blank">
+              View on GitHub
+              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+            </a>
+          </div>
+        </div>`;
+      removeFile(f.name);
+    }catch(e){
+      if(badge){badge.className='badge badge-err';badge.textContent='Failed';}
+      itemsEl.innerHTML+=`
+        <div class="result-item">
+          <div class="dot dot-err"></div>
+          <div>
+            <div>${f.name}</div>
+            <div class="res-err">${e.message}</div>
+          </div>
+        </div>`;
+    }
+    done++; pb.style.width=Math.round((done/total)*100)+'%';
+  }
+  setTimeout(()=>{pw.style.display='none';pb.style.width='0%';},700);
+  updateBtn();
+  toast('Done — files are in your repo!');
+}
+</script>
+</body>
+</html>

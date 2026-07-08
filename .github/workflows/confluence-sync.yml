@@ -2,8 +2,10 @@ name: Sync Confluence Skills
 
 on:
   schedule:
-    - cron: '*/15 * * * *'   # every 15 minutes
+    - cron: '*/15 * * * *'   # every 15 minutes, as a fallback safety net
   workflow_dispatch: {}       # adds a manual "Run workflow" button in the Actions tab
+  repository_dispatch:
+    types: [confluence_page_updated]   # fired by Confluence Automation on publish/update
 
 jobs:
   sync:

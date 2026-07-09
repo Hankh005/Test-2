@@ -1,77 +1,132 @@
+"""
+Pulls two specific Confluence pages (and their descendants) and writes them as
+Markdown under skills/, mirroring the Confluence page hierarchy as nested folders
+(a page with children becomes a folder containing README.md + its children; a
+leaf page becomes a file).
+
+Runs inside GitHub Actions — see .github/workflows/confluence-sync.yml.
+
+Required env vars:
+  CONFLUENCE_BASE_URL    e.g. https://quickbase.atlassian.net/wiki
+  CONFLUENCE_EMAIL       the Atlassian account email tied to the API token
+  CONFLUENCE_API_TOKEN   https://id.atlassian.com/manage-profile/security/api-tokens
+  CONFLUENCE_SPACE_ID    numeric space ID only, e.g. 6386384916 (no labels/parentheses)
+"""
 import os
-import base64
+import re
+import sys
 import requests
+from collections import defaultdict
+from markdownify import markdownify
 
-CONFLUENCE_BASE_URL = os.environ["CONFLUENCE_BASE_URL"]  # e.g. https://quickbase.atlassian.net/wiki
-CONFLUENCE_EMAIL = os.environ["CONFLUENCE_EMAIL"]
-CONFLUENCE_API_TOKEN = os.environ["CONFLUENCE_API_TOKEN"]
-GH_TOKEN = os.environ["GH_TOKEN"]
-GH_REPO = os.environ["GH_REPO"]  # e.g. "Hankh005/Test-2"
+BASE_URL = os.environ["CONFLUENCE_BASE_URL"].rstrip("/")
+AUTH = (os.environ["CONFLUENCE_EMAIL"], os.environ["CONFLUENCE_API_TOKEN"])
+SPACE_ID = os.environ["CONFLUENCE_SPACE_ID"]
+OUTPUT_DIR = "skills"
 
-OWNER, REPO = GH_REPO.split("/")
-
-PAGE_IDS = ["6429147235", "6429769806"]
-
-
-def fetch_page_markdown(page_id):
-    url = f"{CONFLUENCE_BASE_URL}/api/v2/pages/{page_id}"
-    params = {"body-format": "markdown"}
-    resp = requests.get(
-        url,
-        params=params,
-        auth=(CONFLUENCE_EMAIL, CONFLUENCE_API_TOKEN),
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    return data.get("body", {}).get("markdown", {}).get("value", "")
+# Only these two pages (and everything nested under them) get synced.
+ROOT_PAGE_IDS = ["6429147235", "6429769806"]
 
 
-def get_existing_sha(path):
-    url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{path}"
-    headers = {
-        "Authorization": f"Bearer {GH_TOKEN}",
-        "Accept": "application/vnd.github+json",
-    }
-    resp = requests.get(url, headers=headers)
-    if resp.status_code == 200:
-        return resp.json().get("sha")
-    return None
+def slugify(title: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    return slug or "untitled"
 
 
-def push_to_github(path, content, commit_message):
-    url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{path}"
-    headers = {
-        "Authorization": f"Bearer {GH_TOKEN}",
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json",
-    }
+def get_all_pages() -> list[dict]:
+    pages = []
+    url = f"{BASE_URL}/api/v2/spaces/{SPACE_ID}/pages"
+    params = {"limit": 100, "body-format": "storage"}
 
-    encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+    while url:
+        r = requests.get(url, params=params, auth=AUTH, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        pages.extend(data["results"])
 
-    body = {
-        "message": commit_message,
-        "content": encoded,
-    }
+        next_link = data.get("_links", {}).get("next")
+        if next_link:
+            url = f"{BASE_URL}{next_link}" if next_link.startswith("/") else next_link
+            params = {}  # next_link already has query params baked in
+        else:
+            url = None
 
-    sha = get_existing_sha(path)
-    if sha:
-        body["sha"] = sha
-
-    resp = requests.put(url, headers=headers, json=body)
-    resp.raise_for_status()
-    return resp.json()
+    return pages
 
 
-def sync_page(page_id):
-    content = fetch_page_markdown(page_id)
-    path = f"skills/{page_id}.md"
-    push_to_github(path, content, f"sync: page {page_id}")
-    print(f"Synced page {page_id}")
+def page_to_markdown(page: dict) -> str:
+    storage_html = page.get("body", {}).get("storage", {}).get("value", "")
+    if not storage_html.strip():
+        return ""
+    return markdownify(storage_html, heading_style="ATX").strip()
+
+
+def unique_slug(title: str, used: set) -> str:
+    """De-dupe slugs within a single directory only (siblings), not globally."""
+    base = slugify(title)
+    slug = base
+    n = 1
+    while slug in used:
+        n += 1
+        slug = f"{base}-{n}"
+    used.add(slug)
+    return slug
+
+
+def write_page(page: dict, dir_path: str, sibling_slugs: set, children_map: dict) -> int:
+    """Writes one page (as a file or folder+README) and recurses into its children.
+    Returns count of files written."""
+    written = 0
+    title = page["title"]
+    slug = unique_slug(title, sibling_slugs)
+    children = children_map.get(page["id"], [])
+    md = page_to_markdown(page)
+    header = f"<!-- Synced from Confluence page {page['id']}: {title} -->\n\n"
+
+    if children:
+        folder = os.path.join(dir_path, slug)
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, "README.md"), "w") as f:
+            f.write(header + (md + "\n" if md else ""))
+        written += 1
+
+        child_slugs: set = set()
+        for child in sorted(children, key=lambda p: p["title"]):
+            written += write_page(child, folder, child_slugs, children_map)
+    else:
+        path = os.path.join(dir_path, f"{slug}.md")
+        with open(path, "w") as f:
+            f.write(header + (md + "\n" if md else ""))
+        written += 1
+
+    return written
 
 
 def main():
-    for page_id in PAGE_IDS:
-        sync_page(page_id)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    pages = get_all_pages()
+    by_id = {p["id"]: p for p in pages}
+
+    children_map = defaultdict(list)
+    for p in pages:
+        parent_id = p.get("parentId")
+        if parent_id and parent_id in by_id:
+            children_map[parent_id].append(p)
+
+    missing = [pid for pid in ROOT_PAGE_IDS if pid not in by_id]
+    if missing:
+        print(f"Warning: root page ID(s) not found in space: {missing}", file=sys.stderr)
+
+    total_written = 0
+    root_slugs: set = set()
+
+    for root_id in ROOT_PAGE_IDS:
+        root = by_id.get(root_id)
+        if root is None:
+            continue
+        total_written += write_page(root, OUTPUT_DIR, root_slugs, children_map)
+
+    print(f"Synced {total_written} file(s)/folder(s) from {len(ROOT_PAGE_IDS)} root page(s).", file=sys.stderr)
 
 
 if __name__ == "__main__":
